@@ -37,6 +37,7 @@ class Tip:
     teams: str
     matchTime: str
     prediction: str
+    description: str
     odds: List[Odds]
 
 
@@ -71,6 +72,39 @@ class AcademiaScraperImproved:
             print(f"❌ Erro ao configurar o driver: {e}")
             print("Certifique-se de que o Google Chrome está instalado")
             raise
+
+    def is_match_finished(self, text: str) -> bool:
+        """Verifica se a partida já terminou baseado no texto"""
+        text_lower = text.lower()
+        
+        # Se contém "ao vivo" ou "live", definitivamente NÃO está terminada
+        if 'ao vivo' in text_lower or 'live' in text_lower:
+            return False
+        
+        # Palavras-chave que indicam que a partida já terminou ou foi adiada
+        finished_keywords = [
+            'terminado',
+            'finalizado',
+            'encerrado',
+            'finished',
+            'ended',
+            'adiado',
+            'adiada',
+            'postponed',
+            'cancelado',
+            'cancelada',
+            'cancelled',
+            'canceled',
+            'completed',
+            'ft',  # Full Time
+        ]
+        
+        # Verifica se contém alguma palavra-chave de partida terminada
+        for keyword in finished_keywords:
+            if keyword in text_lower:
+                return True
+        
+        return False
 
     def get_main_page_data(self) -> List[Dict]:
         """Extrai dados da página principal"""
@@ -116,17 +150,25 @@ class AcademiaScraperImproved:
                     "⚠️ Tabela específica não encontrada. Tentando método alternativo...")
                 return self.get_data_alternative_method()
 
-            # Extrai as primeiras 5 linhas
-            rows = table.find_elements(By.TAG_NAME, "tr")[:5]
-            print(f"📊 Encontradas {len(rows)} linhas na tabela")
+            # Busca todas as linhas disponíveis
+            all_rows = table.find_elements(By.TAG_NAME, "tr")
+            print(f"📊 Encontradas {len(all_rows)} linhas na tabela")
 
+            # Processa linhas até conseguir 5 partidas válidas (não terminadas)
             match_data = []
-            for i, row in enumerate(rows):
+            max_matches = 5
+            
+            for i, row in enumerate(all_rows):
+                # Para quando já tiver 5 partidas válidas
+                if len(match_data) >= max_matches:
+                    break
+                    
                 try:
                     print(f"🔄 Processando linha {i+1}...")
                     match_info = self.extract_row_data(row, i+1)
                     if match_info:
                         match_data.append(match_info)
+                        print(f"   ✅ Partida válida adicionada ({len(match_data)}/{max_matches})")
                 except Exception as e:
                     print(f"❌ Erro ao processar linha {i+1}: {e}")
                     continue
@@ -169,13 +211,21 @@ class AcademiaScraperImproved:
             print(
                 f"📊 Total de elementos únicos encontrados: {len(match_elements)}")
 
+            # Processa elementos até conseguir 5 partidas válidas (não terminadas)
             match_data = []
-            for i, element in enumerate(match_elements[:5]):
+            max_matches = 5
+            
+            for i, element in enumerate(match_elements):
+                # Para quando já tiver 5 partidas válidas
+                if len(match_data) >= max_matches:
+                    break
+                    
                 try:
                     print(f"🔄 Processando elemento {i+1}...")
                     match_info = self.extract_element_data(element, i+1)
                     if match_info:
                         match_data.append(match_info)
+                        print(f"   ✅ Partida válida adicionada ({len(match_data)}/{max_matches})")
                 except Exception as e:
                     print(f"❌ Erro ao processar elemento {i+1}: {e}")
                     continue
@@ -193,6 +243,15 @@ class AcademiaScraperImproved:
             if len(cells) < 2:
                 print(
                     f"⚠️ Linha {row_number} tem poucas colunas ({len(cells)})")
+                return None
+
+            # Extrai informações básicas da linha
+            row_text = row.text.strip()
+            print(f"📝 Texto da linha: {row_text[:100]}...")
+            
+            # Verifica se a partida já terminou (ignora jogos terminados)
+            if self.is_match_finished(row_text):
+                print(f"⏭️  Partida terminada detectada na linha {row_number} - Ignorando...")
                 return None
 
             # Procura por link na linha
@@ -216,13 +275,9 @@ class AcademiaScraperImproved:
             if not link_url:
                 print(f"⚠️ Link não encontrado na linha {row_number}")
                 # Tenta usar o texto da linha mesmo sem link
-                return self.create_basic_match_data(row.text.strip(), row_number)
+                return self.create_basic_match_data(row_text, row_number)
 
             print(f"🔗 Link encontrado: {link_url}")
-
-            # Extrai informações básicas da linha
-            row_text = row.text.strip()
-            print(f"📝 Texto da linha: {row_text[:100]}...")
 
             # Cria dados básicos
             match_data = self.create_basic_match_data(
@@ -251,6 +306,11 @@ class AcademiaScraperImproved:
             print(f"📝 Elemento {element_number}: {element_text[:100]}...")
 
             if not link_url and not element_text:
+                return None
+            
+            # Verifica se a partida já terminou (ignora jogos terminados)
+            if self.is_match_finished(element_text):
+                print(f"⏭️  Partida terminada detectada no elemento {element_number} - Ignorando...")
                 return None
 
             match_data = self.create_basic_match_data(
@@ -282,8 +342,10 @@ class AcademiaScraperImproved:
         # Extrai times
         teams = self.extract_teams_from_text(text)
 
-        # Extrai horário
+        # Extrai horário e adiciona data atual
         match_time = self.extract_time_from_text(text)
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        match_time = f"{current_date} {match_time}"
 
         # Extrai liga
         league = self.extract_league_from_text(text)
@@ -295,6 +357,7 @@ class AcademiaScraperImproved:
             'teams': teams,
             'matchTime': match_time,
             'prediction': 'Predição não disponível',
+            'description': '',
             'odds': [],
             'detail_url': link_url
         }
@@ -326,6 +389,11 @@ class AcademiaScraperImproved:
             prediction = self.extract_prediction_from_page()
             if prediction:
                 details['prediction'] = prediction
+
+            # Procura por description (nova propriedade)
+            description = self.extract_description_from_page()
+            if description:
+                details['description'] = description
 
             # Procura por liga
             league = self.extract_league_from_page()
@@ -404,16 +472,130 @@ class AcademiaScraperImproved:
             
         return odds
 
+    def extract_description_from_page(self) -> Optional[str]:
+        """Extrai description da página de detalhes (Sugestão de aposta + Previsão)"""
+        descriptions = []
+        
+        # PRIMEIRA INFORMAÇÃO: Sugestão de aposta
+        suggestion_selectors = [
+            "#_preview div.preview_main_container article div.preview_resume div.preview_intro.toggle_content",
+            "div.preview_resume div.preview_intro.toggle_content",
+            "div.preview_intro.toggle_content",
+            ".preview_intro.toggle_content"
+        ]
+        
+        suggestion_text = None
+        for selector in suggestion_selectors:
+            try:
+                elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                print(f"📝 Testando seletor de sugestão '{selector}': {len(elements)} elementos")
+                if elements:
+                    suggestion_text = elements[0].text.strip()
+                    if suggestion_text and len(suggestion_text) > 3:
+                        print(f"✅ Sugestão de aposta encontrada: {suggestion_text[:50]}...")
+                        break
+            except Exception as e:
+                continue
+        
+        if suggestion_text:
+            descriptions.append(f"**Sugestão de aposta:**\n{suggestion_text}")
+        
+        # SEGUNDA INFORMAÇÃO: Previsão
+        preview_selectors = [
+            "#_preview div.preview_main_container article div.preview_pre_intro div.preview_body",
+            "div.preview_pre_intro div.preview_body",
+            "div.preview_body"
+        ]
+        
+        preview_text = None
+        for selector in preview_selectors:
+            try:
+                elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                print(f"📝 Testando seletor de previsão '{selector}': {len(elements)} elementos")
+                if elements:
+                    preview_text = elements[0].text.strip()
+                    if preview_text and len(preview_text) > 3:
+                        print(f"✅ Previsão encontrada: {preview_text[:50]}...")
+                        break
+            except Exception as e:
+                continue
+        
+        if preview_text:
+            descriptions.append(f"**Previsão:**\n{preview_text}")
+        
+        # Concatena as duas informações
+        if descriptions:
+            final_description = "\n\n".join(descriptions)
+            print(f"✅ Description completa extraída com sucesso ({len(final_description)} caracteres)")
+            return final_description
+        
+        print("⚠️ Nenhuma description encontrada")
+        return ""
+
     def extract_prediction_from_page(self) -> Optional[str]:
         """Extrai predição da página de detalhes"""
+        predictions = []
+        
+        # PRIMEIRA INFORMAÇÃO: Sugestão de aposta
+        suggestion_selectors = [
+            "#_preview div.preview_main_container article div.preview_resume div.preview_intro.toggle_content",
+            "div.preview_resume div.preview_intro.toggle_content",
+            "div.preview_intro.toggle_content",
+            ".preview_intro.toggle_content"
+        ]
+        
+        suggestion_text = None
+        for selector in suggestion_selectors:
+            try:
+                elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                print(f"🔮 Testando seletor de sugestão '{selector}': {len(elements)} elementos")
+                if elements:
+                    suggestion_text = elements[0].text.strip()
+                    if suggestion_text and len(suggestion_text) > 3:
+                        print(f"✅ Sugestão de aposta encontrada: {suggestion_text[:50]}...")
+                        break
+            except Exception as e:
+                continue
+        
+        if suggestion_text:
+            predictions.append(f"**Sugestão de aposta:**\n{suggestion_text}")
+        
+        # SEGUNDA INFORMAÇÃO: Previsão
+        preview_selectors = [
+            "#_preview div.preview_main_container article div.preview_pre_intro div.preview_body",
+            "div.preview_pre_intro div.preview_body",
+            "div.preview_body"
+        ]
+        
+        preview_text = None
+        for selector in preview_selectors:
+            try:
+                elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                print(f"🔮 Testando seletor de previsão '{selector}': {len(elements)} elementos")
+                if elements:
+                    preview_text = elements[0].text.strip()
+                    if preview_text and len(preview_text) > 3:
+                        print(f"✅ Previsão encontrada: {preview_text[:50]}...")
+                        break
+            except Exception as e:
+                continue
+        
+        if preview_text:
+            predictions.append(f"**Previsão:**\n{preview_text}")
+        
+        # Concatena as duas informações
+        if predictions:
+            final_prediction = "\n\n".join(predictions)
+            print(f"✅ Predição completa extraída com sucesso ({len(final_prediction)} caracteres)")
+            return final_prediction
+        
+        # FALLBACK: Seletores antigos caso os novos não funcionem
+        print("⚠️ Tentando seletores de fallback...")
         prediction_selectors = [
-            # Seletor específico fornecido para predição
             "bet-suggestion > preview_bet_odd > div.preview_bet > p",
             ".bet-suggestion .preview_bet_odd .preview_bet > p",
             ".preview_bet > p",
             "div.preview_bet p",
-            
-            # Seletores genéricos como fallback
             "[class*='prediction']",
             "[class*='tip']",
             "[class*='recommendation']",
@@ -425,15 +607,13 @@ class AcademiaScraperImproved:
 
         for selector in prediction_selectors:
             try:
-                # Busca todos os elementos <p> dentro de preview_bet
                 pred_elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
-                print(f"🔮 Testando seletor de predição '{selector}': {len(pred_elements)} elementos")
+                print(f"🔮 Testando seletor de fallback '{selector}': {len(pred_elements)} elementos")
                 
                 for pred_element in pred_elements:
                     prediction = pred_element.text.strip()
-                    # Ignora se for apenas um número (provavelmente é odd)
                     if prediction and len(prediction) > 3 and not re.match(r'^\d+\.?\d*$', prediction):
-                        print(f"✅ Predição encontrada com seletor '{selector}': {prediction[:50]}...")
+                        print(f"✅ Predição encontrada com fallback '{selector}': {prediction[:50]}...")
                         return prediction
                         
             except NoSuchElementException:
@@ -536,6 +716,8 @@ class AcademiaScraperImproved:
         # Palavras que NÃO são nomes de times e devem ser ignoradas
         ignore_words = [
             'previsão', 'previsao', 'terminado', 'finalizado', 'ao vivo', 
+            'adiado', 'adiada', 'postponed', 'cancelado', 'cancelada', 
+            'cancelled', 'canceled', 'encerrado',
             'live', 'vs', 'versus', 'hoje', 'amanhã', 'amanha',
             'preview', 'resultado', 'placar', 'transmissão', 'transmissao'
         ]
