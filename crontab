@@ -1,0 +1,18 @@
+# ============================================
+# Configuração do Cron para Academia Scraper
+# ============================================
+# Executa o scraper todos os dias às 00:01 (horário do container)
+
+# Formato: MIN HORA DIA MÊS DIA_SEMANA COMANDO
+# MIN: 0-59
+# HORA: 0-23
+# DIA: 1-31
+# MÊS: 1-12
+# DIA_SEMANA: 0-7 (0 e 7 = Domingo)
+
+# Executa todos os dias às 00:01
+1 0 * * * cd /app && python academia_scraper_improved.py >> /app/logs/cron.log 2>&1
+
+# Linha em branco necessária no final do arquivo (obrigatório para cron)
+
+

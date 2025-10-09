@@ -1,0 +1,55 @@
+# ============================================
+# .dockerignore
+# ============================================
+# Arquivos e diretórios que NÃO devem ser 
+# copiados para dentro da imagem Docker
+
+# Ambiente virtual Python
+venv/
+env/
+.env
+*.pyc
+__pycache__/
+
+# Arquivos de configuração local
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs e dados temporários
+logs/
+*.log
+debug_page.png
+data/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+.dockerignore
+Dockerfile
+docker-compose.yml
+
+# Arquivos de sistema
+.DS_Store
+Thumbs.db
+
+# Arquivos de teste
+tests/
+test_*.py
+*_test.py
+
+# Documentação de desenvolvimento (não necessária no container)
+docs/
+*.md
+!README.md
+AGENDAMENTO_AUTOMATICO.md
+COMANDOS_DOCKER.md
+DOCKER_GUIDE.md
+QUICK_START.md
+LEIA_PRIMEIRO.md
+

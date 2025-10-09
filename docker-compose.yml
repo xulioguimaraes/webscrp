@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # Serviço do Academia Scraper (com agendamento automático)
+  # ============================================
+  scraper:
+    # Nome do container
+    container_name: academia-scraper
+    
+    # Nome da imagem (permite usar com docker run)
+    image: academia-scraper:latest
+    
+    # Constrói a imagem a partir do Dockerfile local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    
+    # Reinicia automaticamente se o container parar ou falhar
+    # Necessário para manter o cron rodando 24/7
+    restart: unless-stopped
+    
+    # Variáveis de ambiente
+    environment:
+      # URL da sua API (altere conforme necessário)
+      - API_URL=https://sportstips-mu.vercel.app/d
+      
+      # Executar scraper imediatamente ao iniciar? (true/false)
+      # true = roda imediatamente + depois segue o agendamento
+      # false = apenas segue o agendamento (00:01 todos os dias)
+      - RUN_ON_START=true
+      
+      # Configurações do Chrome (já definidas no Dockerfile)
+      - CHROME_BIN=/usr/bin/chromium
+      - CHROMEDRIVER_PATH=/usr/bin/chromedriver
+      
+      # Timezone do container (altere conforme sua região)
+      # Exemplos: America/Sao_Paulo, America/New_York, Europe/London
+      - TZ=America/Sao_Paulo
+    
+    # Volumes para persistir dados
+    volumes:
+      # Monta diretório local para salvar screenshots e logs
+      - ./data:/app/data
+      - ./logs:/app/logs
+      # Permite que o container salve debug_page.png na máquina host
+      - ./:/app/output
+    
+    # Configurações de rede
+    # "host.docker.internal" permite acessar localhost da máquina host
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    
+    # Limita recursos (opcional)
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # ============================================
+  # [OPCIONAL] Adicione sua API aqui
+  # ============================================
+  # api:
+  #   image: sua-api-image:latest
+  #   container_name: academia-api
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - NODE_ENV=production
+  #   restart: unless-stopped
+

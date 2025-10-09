@@ -7,6 +7,7 @@ e cadastrar na API local
 import requests
 import time
 import json
+import os
 from datetime import datetime
 from typing import List, Dict, Optional
 from dataclasses import dataclass, asdict
@@ -62,10 +63,24 @@ class AcademiaScraperImproved:
             "--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
         try:
-            # Usa webdriver-manager para baixar e gerenciar o ChromeDriver
-            service = Service(ChromeDriverManager().install())
-            self.driver = webdriver.Chrome(
-                service=service, options=chrome_options)
+            # Verifica se está rodando no Docker (variáveis de ambiente)
+            chrome_bin = os.getenv('CHROME_BIN')
+            chromedriver_path = os.getenv('CHROMEDRIVER_PATH')
+            
+            if chrome_bin and chromedriver_path:
+                # Modo Docker: usa ChromeDriver do sistema
+                print("🐳 Detectado ambiente Docker")
+                chrome_options.binary_location = chrome_bin
+                service = Service(chromedriver_path)
+                self.driver = webdriver.Chrome(
+                    service=service, options=chrome_options)
+            else:
+                # Modo local: usa webdriver-manager
+                print("💻 Modo local: usando webdriver-manager")
+                service = Service(ChromeDriverManager().install())
+                self.driver = webdriver.Chrome(
+                    service=service, options=chrome_options)
+            
             self.driver.set_page_load_timeout(30)
             print("✅ ChromeDriver configurado com sucesso!")
         except Exception as e:
@@ -777,7 +792,7 @@ class AcademiaScraperImproved:
     def send_to_api(self, tip_data: Dict) -> bool:
         """Envia dados para a API local"""
         try:
-            api_url = f"http://localhost:3000/api/tips"
+            api_url = f"https://sportstips-mu.vercel.app/api/tips"
 
             # Remove campos que não devem ser enviados
             clean_data = {k: v for k, v in tip_data.items() if k !=
@@ -850,10 +865,21 @@ def main():
     print("=" * 60)
 
     # Configurações
-    api_url = input(
-        "Digite a URL da sua API (padrão: http://localhost:8000): ").strip()
+    # Verifica se API_URL foi definida como variável de ambiente (Docker)
+    api_url = os.getenv('API_URL')
+    
     if not api_url:
-        api_url = "http://localhost:8000"
+        # Modo interativo (local): pergunta ao usuário
+        try:
+            api_url = input(
+                "Digite a URL da sua API (padrão: http://localhost:3000): ").strip()
+        except EOFError:
+            # Se não houver stdin disponível (ex: executando via cron/docker)
+            api_url = ""
+    
+    # Define URL padrão se nada foi fornecido
+    if not api_url:
+        api_url = "http://localhost:3000"
 
     print(f"🌐 API configurada para: {api_url}")
     print("")
