@@ -548,64 +548,33 @@ class AcademiaScraperImproved:
         return ""
 
     def extract_prediction_from_page(self) -> Optional[str]:
-        """Extrai predição da página de detalhes"""
-        predictions = []
+        """Extrai predição da página de detalhes (APENAS a sugestão de aposta curta)"""
         
-        # PRIMEIRA INFORMAÇÃO: Sugestão de aposta
+        # PREDICTION = APENAS a Sugestão de aposta (texto curto)
+        # Seletor específico fornecido pelo usuário como PRIORIDADE
         suggestion_selectors = [
-            "#_preview div.preview_main_container article div.preview_resume div.preview_intro.toggle_content",
-            "div.preview_resume div.preview_intro.toggle_content",
-            "div.preview_intro.toggle_content",
-            ".preview_intro.toggle_content"
+            "#_preview div.preview_main_container article div.preview_container div.preview_resume div.bet-suggestion div.preview_bet_odd div.preview_bet",
+            "#_preview div.preview_main_container article div.bet-suggestion div.preview_bet_odd div.preview_bet",
+            "div.bet-suggestion div.preview_bet_odd div.preview_bet",
+            "div.preview_bet_odd div.preview_bet",
+            "div.preview_bet",
+         
         ]
         
-        suggestion_text = None
         for selector in suggestion_selectors:
             try:
                 elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
-                print(f"🔮 Testando seletor de sugestão '{selector}': {len(elements)} elementos")
+                print(f"🔮 Testando seletor de predição '{selector}': {len(elements)} elementos")
                 if elements:
                     suggestion_text = elements[0].text.strip()
                     if suggestion_text and len(suggestion_text) > 3:
-                        print(f"✅ Sugestão de aposta encontrada: {suggestion_text[:50]}...")
-                        break
+                        print(f"✅ Predição (sugestão) encontrada: {suggestion_text[:50]}...")
+                        return suggestion_text
             except Exception as e:
                 continue
-        
-        if suggestion_text:
-            predictions.append(f"**Sugestão de aposta:**\n{suggestion_text}")
-        
-        # SEGUNDA INFORMAÇÃO: Previsão
-        preview_selectors = [
-            "#_preview div.preview_main_container article div.preview_pre_intro div.preview_body",
-            "div.preview_pre_intro div.preview_body",
-            "div.preview_body"
-        ]
-        
-        preview_text = None
-        for selector in preview_selectors:
-            try:
-                elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
-                print(f"🔮 Testando seletor de previsão '{selector}': {len(elements)} elementos")
-                if elements:
-                    preview_text = elements[0].text.strip()
-                    if preview_text and len(preview_text) > 3:
-                        print(f"✅ Previsão encontrada: {preview_text[:50]}...")
-                        break
-            except Exception as e:
-                continue
-        
-        if preview_text:
-            predictions.append(f"**Previsão:**\n{preview_text}")
-        
-        # Concatena as duas informações
-        if predictions:
-            final_prediction = "\n\n".join(predictions)
-            print(f"✅ Predição completa extraída com sucesso ({len(final_prediction)} caracteres)")
-            return final_prediction
         
         # FALLBACK: Seletores antigos caso os novos não funcionem
-        print("⚠️ Tentando seletores de fallback...")
+        print("⚠️ Tentando seletores de fallback para predição...")
         prediction_selectors = [
             "bet-suggestion > preview_bet_odd > div.preview_bet > p",
             ".bet-suggestion .preview_bet_odd .preview_bet > p",
@@ -840,6 +809,11 @@ class AcademiaScraperImproved:
                 print(f"   ID: {match['id']}")
                 print(f"   Times: {match['teams']}")
                 print(f"   Categoria: {match['category']}")
+                print(f"   Liga: {match['league']}")
+                print(f"   Horário: {match['matchTime']}")
+                print(f"   Predição: {match['prediction']}")
+                print(f"   Descrição: {match['description']}")
+                print(f"   Odds: {match['odds']}")
 
                 if self.send_to_api(match):
                     success_count += 1

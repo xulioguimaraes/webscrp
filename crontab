@@ -3,6 +3,12 @@
 # ============================================
 # Executa o scraper todos os dias às 00:01 (horário do container)
 
+# Define variáveis de ambiente necessárias
+PATH=/usr/local/bin:/usr/bin:/bin
+CHROME_BIN=/usr/bin/chromium
+CHROMEDRIVER_PATH=/usr/bin/chromedriver
+API_URL=https://sportstips-mu.vercel.app/d
+
 # Formato: MIN HORA DIA MÊS DIA_SEMANA COMANDO
 # MIN: 0-59
 # HORA: 0-23
@@ -10,8 +16,8 @@
 # MÊS: 1-12
 # DIA_SEMANA: 0-7 (0 e 7 = Domingo)
 
-# Executa todos os dias às 00:01
-1 0 * * * cd /app && python academia_scraper_improved.py >> /app/logs/cron.log 2>&1
+# Executa todos os dias às 00:15 usando caminho completo do Python
+40 0 * * * cd /app && /usr/local/bin/python3 academia_scraper_improved.py >> /app/logs/cron.log 2>&1
 
 # Linha em branco necessária no final do arquivo (obrigatório para cron)
 
