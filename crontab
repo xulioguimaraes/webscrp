@@ -17,7 +17,7 @@ API_URL=https://sportstips-mu.vercel.app/d
 # DIA_SEMANA: 0-7 (0 e 7 = Domingo)
 
 # Executa todos os dias às 00:15 usando caminho completo do Python
-40 0 * * * cd /app && /usr/local/bin/python3 academia_scraper_improved.py >> /app/logs/cron.log 2>&1
+0 6 * * * cd /app && /usr/local/bin/python3 academia_scraper_improved.py >> /app/logs/cron.log 2>&1
 
 # Linha em branco necessária no final do arquivo (obrigatório para cron)
 

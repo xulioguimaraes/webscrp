@@ -65,6 +65,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # 7. CÓPIA DOS ARQUIVOS DO PROJETO
 # Copia todos os arquivos necessários para /app
+COPY academia_scraper/ ./academia_scraper/
 COPY academia_scraper_improved.py .
 COPY install_and_run.sh .
 COPY README.md .

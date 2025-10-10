@@ -26,7 +26,7 @@ echo ""
 # Executa o scraper imediatamente na primeira vez (opcional)
 if [ "$RUN_ON_START" = "true" ]; then
     echo "▶️  Executando scraper pela primeira vez..."
-    cd /app && python academia_scraper_improved.py
+    cd /app && /usr/local/bin/python3 academia_scraper_improved.py
     echo ""
 fi
 
